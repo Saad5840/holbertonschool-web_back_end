@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Module that provides a function to get the floor of a floating-point number."""
+"""Module that provides a function to get the floor of a float"""
 
 
 import math
