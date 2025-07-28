@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Module that provides a function to sum a list containing integers and floats."""
+"""Module provides function to sum a list containing integers and floats."""
 
 
 from typing import List, Union
