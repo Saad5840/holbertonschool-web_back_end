@@ -6,5 +6,5 @@ from typing import Union, Tuple
 
 
 def to_kv(k: str, v: Union[int, float]) -> Tuple[str, float]:
-    """Return tuple, the first element is k, the second is v squared as float."""
+    """Return tuple, the first element is k, second is v squared as float."""
     return (k, float(v ** 2))
