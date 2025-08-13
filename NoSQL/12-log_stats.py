@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Script that provides some stats about Nginx logs stored in MongoDB"""
+"""12-log_stats.py: Provides stats about Nginx logs stored in MongoDB"""
 
 from pymongo import MongoClient
 
 
 def main():
-    """Fetch and display stats about nginx logs"""
+    """Fetch and display Nginx logs stats"""
     client = MongoClient('mongodb://127.0.0.1:27017')
     db = client.logs
     nginx = db.nginx
@@ -14,18 +14,21 @@ def main():
     total_logs = nginx.count_documents({})
     print(f"{total_logs} logs")
 
-    # Methods counts
+    # HTTP Methods
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     print("Methods:")
+
+    # Count each method
     pipeline = [
         {"$match": {"method": {"$in": methods}}},
         {"$group": {"_id": "$method", "count": {"$sum": 1}}}
     ]
-    results = {doc["_id"]: doc["count"] for doc in nginx.aggregate(pipeline)}
-    for method in methods:
-        print(f"\tmethod {method}: {results.get(method, 0)}")
+    counts = {doc["_id"]: doc["count"] for doc in nginx.aggregate(pipeline)}
 
-    # Number of GET /status requests
+    for method in methods:
+        print(f"\tmethod {method}: {counts.get(method, 0)}")
+
+    # Count GET /status
     status_count = nginx.count_documents({"method": "GET", "path": "/status"})
     print(f"{status_count} status check")
 
