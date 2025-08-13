@@ -3,49 +3,22 @@
 
 from pymongo import MongoClient
 
-
-def main():
-    """Fetch and display Nginx logs stats efficiently"""
+if __name__ == "__main__":
     client = MongoClient('mongodb://127.0.0.1:27017')
     db = client.logs
     nginx = db.nginx
 
-    # List of HTTP methods to check
-    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
-
-    # Aggregation pipeline
-    pipeline = [
-        {
-            "$facet": {
-                "total_logs": [{"$count": "count"}],
-                "methods_count": [
-                    {"$match": {"method": {"$in": methods}}},
-                    {"$group": {"_id": "$method", "count": {"$sum": 1}}}
-                ],
-                "status_check": [
-                    {"$match": {"method": "GET", "path": "/status"}},
-                    {"$count": "count"}
-                ]
-            }
-        }
-    ]
-
-    result = list(nginx.aggregate(pipeline))[0]
-
-    # Total logs
-    total_logs = result["total_logs"][0]["count"] if result["total_logs"] else 0
+    # Total number of documents
+    total_logs = nginx.count_documents({})
     print(f"{total_logs} logs")
 
-    # Methods counts
-    counts = {doc["_id"]: doc["count"] for doc in result["methods_count"]}
+    # Count per HTTP method
     print("Methods:")
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     for method in methods:
-        print(f"\tmethod {method}: {counts.get(method, 0)}")
+        count = nginx.count_documents({"method": method})
+        print(f"\tmethod {method}: {count}")
 
-    # Status check count
-    status_count = result["status_check"][0]["count"] if result["status_check"] else 0
+    # Number of GET /status
+    status_count = nginx.count_documents({"method": "GET", "path": "/status"})
     print(f"{status_count} status check")
-
-
-if __name__ == "__main__":
-    main()
