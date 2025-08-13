@@ -1,37 +1,39 @@
 #!/usr/bin/env python3
-"""12-log_stats.py: Provides stats about Nginx logs stored in MongoDB"""
-
+"""Print info in a collection"""
 from pymongo import MongoClient
 
-
-def main():
-    """Fetch and display Nginx logs stats"""
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    db = client.logs
-    nginx = db.nginx
-
-    # Total number of logs
-    total_logs = nginx.count_documents({})
-    print(f"{total_logs} logs")
-
-    # HTTP Methods
-    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
-    print("Methods:")
-
-    # Count each method
-    pipeline = [
-        {"$match": {"method": {"$in": methods}}},
-        {"$group": {"_id": "$method", "count": {"$sum": 1}}}
-    ]
-    counts = {doc["_id"]: doc["count"] for doc in nginx.aggregate(pipeline)}
-
-    for method in methods:
-        print(f"\tmethod {method}: {counts.get(method, 0)}")
-
-    # Count GET /status
-    status_count = nginx.count_documents({"method": "GET", "path": "/status"})
-    print(f"{status_count} status check")
-
-
 if __name__ == "__main__":
-    main()
+    """ Make a check for all elements in a collention """
+    client = MongoClient('mongodb://127.0.0.1:27017')
+    collection = client.logs.nginx
+
+    print(f"{collection.estimated_document_count()} logs")
+
+    print("Methods:")
+    for method in ["GET", "POST", "PUT", "PATCH", "DELETE"]:
+        method_count = collection.count_documents({'method': method})
+        print(f"\tmethod {method}: {method_count}")
+
+    check_get = collection.count_documents({
+        'method': 'GET', 'path': "/status"
+    })
+    print(f"{check_get} status check")
+
+    print("IPs:")
+    top_ips = collection.aggregate([
+        {"$group":
+            {
+                "_id": "$ip",
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "ip": "$_id",
+            "count": 1
+        }}
+    ])
+    for ip in top_ips:
+        print(f"\t{ip.get('ip')}: {ip.get('count')}")
