@@ -7,17 +7,21 @@ if __name__ == "__main__":
     client = MongoClient('mongodb://127.0.0.1:27017')
     nginx = client.logs.nginx
 
-    # Total number of logs
-    total = nginx.count_documents({})
-    print(f"{total} logs")
+    # Total logs
+    total_logs = nginx.count_documents({})
+    print(f"{total_logs} logs")
 
-    # Methods count
+    # HTTP methods stats
     print("Methods:")
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    pipeline = [
+        {"$group": {"_id": "$method", "count": {"$sum": 1}}}
+    ]
+    agg_result = nginx.aggregate(pipeline)
+    counts = {doc["_id"]: doc["count"] for doc in agg_result}
     for method in methods:
-        count = nginx.count_documents({"method": method})
-        print(f"\tmethod {method}: {count}")
+        print(f"\tmethod {method}: {counts.get(method, 0)}")
 
-    # GET /status count
-    status = nginx.count_documents({"method": "GET", "path": "/status"})
-    print(f"{status} status check")
+    # GET /status
+    status_count = nginx.count_documents({"method": "GET", "path": "/status"})
+    print(f"{status_count} status check")
