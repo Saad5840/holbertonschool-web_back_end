@@ -1,45 +1,51 @@
 #!/usr/bin/env python3
-""" MongoDB Operations with Python using pymongo """
+"""12-log_stats.py: Provides stats about Nginx logs stored in MongoDB"""
+
 from pymongo import MongoClient
 
-if __name__ == "__main__":
-    """ Provides some stats about Nginx logs stored in MongoDB """
+
+def main():
+    """Fetch and display Nginx logs stats efficiently"""
     client = MongoClient('mongodb://127.0.0.1:27017')
-    nginx_collection = client.logs.nginx
+    db = client.logs
+    nginx = db.nginx
 
-    n_logs = nginx_collection.count_documents({})
-    print(f'{n_logs} logs')
-
+    # List of HTTP methods to check
     methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
-    print('Methods:')
-    for method in methods:
-        count = nginx_collection.count_documents({"method": method})
-        print(f'\tmethod {method}: {count}')
 
-    status_check = nginx_collection.count_documents(
-        {"method": "GET", "path": "/status"}
-    )
-
-    print(f'{status_check} status check')
-
-    top_ips = nginx_collection.aggregate([
-        {"$group":
-            {
-                "_id": "$ip",
-                "count": {"$sum": 1}
+    # Aggregation pipeline
+    pipeline = [
+        {
+            "$facet": {
+                "total_logs": [{"$count": "count"}],
+                "methods_count": [
+                    {"$match": {"method": {"$in": methods}}},
+                    {"$group": {"_id": "$method", "count": {"$sum": 1}}}
+                ],
+                "status_check": [
+                    {"$match": {"method": "GET", "path": "/status"}},
+                    {"$count": "count"}
+                ]
             }
-         },
-        {"$sort": {"count": -1}},
-        {"$limit": 10},
-        {"$project": {
-            "_id": 0,
-            "ip": "$_id",
-            "count": 1
-        }}
-    ])
+        }
+    ]
 
-    print("IPs:")
-    for top_ip in top_ips:
-        ip = top_ip.get("ip")
-        count = top_ip.get("count")
-        print(f'\t{ip}: {count}')
+    result = list(nginx.aggregate(pipeline))[0]
+
+    # Total logs
+    total_logs = result["total_logs"][0]["count"] if result["total_logs"] else 0
+    print(f"{total_logs} logs")
+
+    # Methods counts
+    counts = {doc["_id"]: doc["count"] for doc in result["methods_count"]}
+    print("Methods:")
+    for method in methods:
+        print(f"\tmethod {method}: {counts.get(method, 0)}")
+
+    # Status check count
+    status_count = result["status_check"][0]["count"] if result["status_check"] else 0
+    print(f"{status_count} status check")
+
+
+if __name__ == "__main__":
+    main()
