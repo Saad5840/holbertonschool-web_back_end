@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev": "node",
+    "test": "jest",
+    "lint": "eslint .",
+    "full-test": "npm run lint && npm run test"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": { "^.+\\.js$": "babel-jest" }
+  }
+}
