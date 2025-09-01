@@ -1,47 +1,44 @@
-#!/usr/bin/node
-
 const fs = require('fs');
 
-function countStudents(path) {
-  let content;
+module.exports = function countStudents(path) {
+  let s = [];
+
   try {
-    content = fs.readFileSync(path, 'utf8');
-  } catch (e) {
-    throw new Error('Cannot load the database');
+    s = fs.readFileSync(path, { encoding: 'utf8', flag: 'r' });
+  } catch (err) {
+    throw Error('Cannot load the database');
   }
+  s = s.split('\n');
+  const headers = s.shift().split(',');
 
-  // Split and drop empty lines (including trailing blanks)
-  const rows = content.split('\n').filter((line) => line.trim() !== '');
-  if (rows.length === 0) {
-    console.log('Number of students: 0');
-    return;
+  const groups = {};
+  const studentsObjects = [];
+
+  s.forEach((student) => {
+    if (student) {
+      const info = student.split(',');
+      const studentObject = {};
+
+      headers.forEach((header, index) => {
+        studentObject[header] = info[index];
+        if (header === 'field') {
+          if (groups[info[index]]) {
+            groups[info[index]].push(studentObject.firstname);
+          } else {
+            groups[info[index]] = [studentObject.firstname];
+          }
+        }
+      });
+      studentsObjects.push(studentObject);
+    }
+  });
+
+  console.log(`Number of students: ${studentsObjects.length}`);
+
+  for (const info in groups) {
+    if (groups[info]) {
+      const listStudents = groups[info];
+      console.log(`Number of students in ${info}: ${listStudents.length}. List: ${listStudents.join(', ')}`);
+    }
   }
-
-  // Remove header
-  rows.shift();
-
-  const fields = {}; // { FIELD: [firstnames...] }
-  let total = 0;
-
-  for (const line of rows) {
-    const parts = line.split(',');
-    if (parts.length < 4) continue; // skip malformed
-    const firstname = parts[0].trim();
-    const field = parts[3].trim();
-    if (!firstname || !field) continue;
-
-    if (!fields[field]) fields[field] = [];
-    fields[field].push(firstname);
-    total += 1;
-  }
-
-  console.log(`Number of students: ${total}`);
-
-  // Keep order of first appearance in the CSV
-  for (const field of Object.keys(fields)) {
-    const list = fields[field];
-    console.log(`Number of students in ${field}: ${list.length}. List: ${list.join(', ')}`);
-  }
-}
-
-module.exports = countStudents;
+};
